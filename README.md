@@ -2,6 +2,8 @@
 
 Welcome to the **Dual ESP32 ARGB LED Controller** project! 🎉 This system controls two ESP32 boards that drive synchronized ARGB LED strips (e.g., WS2812B) with wireless communication via ESP-NOW and a web interface for color control.
 
+🔗 **Live Demo:** [Click here to see a sample run of the LED pattern]( https://pipisara.github.io/Two-Board-ARGB-Strip-Sync-via-ESP-NOW/) 🌐
+
 ## 🌟 Features
 
 - **Wireless Synchronization:** 📡 Perfectly synced animations across two ESP32 boards using ESP-NOW
