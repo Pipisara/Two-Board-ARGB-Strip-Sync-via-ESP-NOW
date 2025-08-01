@@ -1,0 +1,1130 @@
+<!DOCTYPE HTML>
+<html>
+<head>
+  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+  <title>Dual ESP32 ARGB LED Controller Demo</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <style>
+    body { 
+      font-family: Arial; 
+      margin: 0px auto; 
+      padding: 10px; 
+      background-color: #121212;
+      color: #e0e0e0;
+      display: flex;
+      flex-direction: column;
+      min-height: 100vh;
+    }
+    
+    .main-container {
+      display: grid;
+      grid-template-columns: 350px 1fr;
+      gap: 20px;
+      margin-bottom: 20px;
+      min-height: 600px;
+    }
+    
+    /* Controller UI Panel (Left) - Original ESP32 styling */
+    .controller-panel {
+      background-color: #1e1e1e;
+      padding: 20px;
+      border-radius: 10px;
+      box-shadow: 0 0 15px rgba(0,0,0,0.3);
+    }
+    
+    .color-picker-container { 
+      margin-bottom: 10px; 
+    }
+    .picker-label {
+      display: block;
+      margin-bottom: 8px;
+      color: #0ccebc;
+      font-size: 14px;
+    }
+    input[type="color"] { 
+      width: 150px; 
+      height: 50px; 
+      margin-bottom: 10px; 
+      border: 2px solid #333; 
+      border-radius: 5px; 
+      background: #333;
+      cursor: pointer;
+    }
+    input[type="text"] { 
+      width: 150px; 
+      height: 30px; 
+      margin: 10px 0; 
+      text-align: center; 
+      border: 2px solid #333; 
+      border-radius: 5px; 
+      background: #333;
+      color: #fff;
+    }
+    button { 
+      background-color: #0ccebc; 
+      color: white; 
+      padding: 10px 20px; 
+      border: none; 
+      border-radius: 5px; 
+      cursor: pointer; 
+      margin-top: 10px;
+      font-weight: bold;
+      transition: all 0.3s;
+    }
+    button:hover {
+      background-color: #0aa899;
+      transform: scale(1.02);
+    }
+    .predefined-colors {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 10px;
+      margin: 20px 0;
+      width: 100%;
+    }
+    .color-box {
+      height: 40px;
+      border-radius: 5px;
+      cursor: pointer;
+      border: 2px solid #333;
+      transition: all 0.2s;
+    }
+    .color-box:hover {
+      transform: scale(1.05);
+      box-shadow: 0 0 10px currentColor;
+    }
+    .color-input-group {
+      margin: 20px 0;
+    }
+    h1 {
+      color: #0ccebc;
+      margin-bottom: 20px;
+      font-size: 18px;
+    }
+    h2 {
+      color: #0ccebc;
+      margin-bottom: 15px;
+      font-size: 14px;
+    }
+    .status {
+      margin-top: 15px;
+      padding: 10px;
+      border-radius: 5px;
+      background-color: #252525;
+      min-height: 20px;
+      width: 100%;
+      transition: all 0.3s;
+      font-size: 12px;
+    }
+    .status.active {
+      background-color: #0ccebc20;
+      border: 1px solid #0ccebc;
+    }
+    .instructions {
+      margin-top: 20px;
+      padding: 15px;
+      background-color: #252525;
+      border-radius: 5px;
+      width: 100%;
+      text-align: left;
+    }
+    .instructions h3 {
+      color: #0ccebc;
+      margin-top: 0;
+      margin-bottom: 10px;
+      font-size: 14px;
+    }
+    .instructions p {
+      margin: 5px 0;
+      font-size: 12px;
+    }
+    
+    /* Visualization Panel (Right) */
+    .visualization-panel {
+      background-color: #1e1e1e;
+      padding: 20px;
+      border-radius: 10px;
+      box-shadow: 0 0 15px rgba(0,0,0,0.3);
+      display: flex;
+      flex-direction: column;
+    }
+    
+    .led-strips-container {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+      margin-bottom: 20px;
+    }
+    
+    .led-strip {
+      background-color: #333;
+      border-radius: 10px;
+      padding: 15px;
+      position: relative;
+    }
+    
+    .strip-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 10px;
+    }
+    
+    .strip-title {
+      color: #0ccebc;
+      font-weight: bold;
+      font-size: 14px;
+    }
+    
+    .esp-now-indicator {
+      background-color: #666;
+      color: #fff;
+      padding: 4px 8px;
+      border-radius: 4px;
+      font-size: 10px;
+      transition: all 0.3s;
+    }
+    
+    .esp-now-indicator.active {
+      background-color: #0ccebc;
+      animation: pulse 0.5s;
+    }
+    
+    @keyframes pulse {
+      0% { transform: scale(1); }
+      50% { transform: scale(1.1); }
+      100% { transform: scale(1); }
+    }
+    
+    .led-canvas {
+      width: 100%;
+      height: 80px;
+      border: 2px solid #555;
+      border-radius: 5px;
+      background-color: #222;
+    }
+    
+    .animation-info {
+      background-color: #252525;
+      padding: 10px;
+      border-radius: 5px;
+      margin-top: 10px;
+    }
+    
+    .current-animation {
+      color: #0ccebc;
+      font-weight: bold;
+      font-size: 14px;
+    }
+    
+    .animation-details {
+      color: #ccc;
+      font-size: 12px;
+      margin-top: 5px;
+    }
+    
+    /* System Diagram (Bottom) */
+    .system-diagram {
+      background-color: #1e1e1e;
+      padding: 20px;
+      border-radius: 10px;
+      box-shadow: 0 0 15px rgba(0,0,0,0.3);
+      text-align: center;
+    }
+    
+    .diagram-title {
+      color: #0ccebc;
+      margin-bottom: 15px;
+      font-size: 16px;
+    }
+    
+    .diagram-svg {
+      width: 100%;
+      max-width: 800px;
+      height: 200px;
+    }
+    
+    /* Debug Panel */
+    .debug-controls {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 15px;
+      flex-wrap: wrap;
+    }
+    
+    .debug-toggle {
+      background-color: #333;
+      color: #fff;
+      border: 1px solid #555;
+      padding: 5px 10px;
+      border-radius: 3px;
+      cursor: pointer;
+      font-size: 11px;
+    }
+    
+    .debug-toggle.active {
+      background-color: #0ccebc;
+      color: #000;
+    }
+    
+    /* Serial Monitor */
+    .serial-monitor {
+      background-color: #000;
+      color: #0f0;
+      font-family: 'Courier New', monospace;
+      font-size: 10px;
+      height: 100px;
+      overflow-y: auto;
+      padding: 5px;
+      border: 1px solid #333;
+      border-radius: 3px;
+      margin-top: 10px;
+    }
+    
+    @media (max-width: 768px) {
+      .main-container {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="main-container">
+    <!-- Controller UI Panel (Left) -->
+    <div class="controller-panel">
+      <h2>පින්බර පොසොන් මංගල්‍යක් වේවා..</h2>
+      <h1>පොසොන් පහන් කූඩුව 2025</h1>
+    
+      <div class="color-picker-container">
+        <span class="picker-label">ඔබ කැමති වර්ණය තෝරන්න</span>
+        <input type="color" id="colorPicker" onchange="updateAndSendColor(this.value)" value="#0ccebc">
+      </div>
+      
+      <div class="predefined-colors">
+        <div class="color-box" style="background-color: #0ccebc;" onclick="selectAndSendColor('#0ccebc')"></div>
+        <div class="color-box" style="background-color: #d9000d;" onclick="selectAndSendColor('#d9000d')"></div>
+        <div class="color-box" style="background-color: #16d900;" onclick="selectAndSendColor('#16d900')"></div>
+        <div class="color-box" style="background-color: #d93300;" onclick="selectAndSendColor('#d93300')"></div>
+        <div class="color-box" style="background-color: #FF00FF;" onclick="selectAndSendColor('#FF00FF')"></div>
+        <div class="color-box" style="background-color: #00FFFF;" onclick="selectAndSendColor('#00FFFF')"></div>
+        <div class="color-box" style="background-color: #FFFF00;" onclick="selectAndSendColor('#FFFF00')"></div>
+        <div class="color-box" style="background-color: #FF00A5;" onclick="selectAndSendColor('#FF00A5')"></div>
+        <div class="color-box" style="background-color: #00FFA5;" onclick="selectAndSendColor('#00FFA5')"></div>
+        <div class="color-box" style="background-color: #A500FF;" onclick="selectAndSendColor('#A500FF')"></div>
+      </div>
+      
+      <div class="color-input-group">
+        <input type="text" id="hexInput" placeholder="#RRGGBB" maxlength="7" value="#0ccebc">
+        <button onclick="sendColor()">හරි</button>
+      </div>
+      
+      <div class="debug-controls">
+        <div class="debug-toggle" onclick="toggleDebug('packets')">Show ESP-NOW Packets</div>
+        <div class="debug-toggle" onclick="toggleDebug('timing')">Timing Markers</div>
+        <div class="debug-toggle" onclick="toggleDebug('sync')">Sync Points</div>
+      </div>
+      
+      <div class="status" id="status">
+        System Ready - Animations Running
+      </div>
+      
+      <div class="serial-monitor" id="serialMonitor">
+        [MAIN] Setup completed<br>
+        [RECV] Receiver board ready<br>
+        [MAIN] Animation 0: Random White Flash<br>
+      </div>
+      
+      <div class="instructions">
+        <h3>How to Use:</h3>
+        <p>• Click any color box to immediately apply that color</p>
+        <p>• Use the color picker to select custom colors</p>
+        <p>• Or manually enter a HEX color code (e.g. #FF00FF)</p>
+        <p>• The "හරි" button confirms your manual selection</p>
+      </div>
+    </div>
+    
+    <!-- Visualization Panel (Right) -->
+    <div class="visualization-panel">
+      <div class="led-strips-container">
+        <!-- Main ESP32 Strip -->
+        <div class="led-strip">
+          <div class="strip-header">
+            <span class="strip-title">Main ESP32 (100 LEDs) - WiFi AP</span>
+            <span class="esp-now-indicator" id="mainIndicator">TX</span>
+          </div>
+          <canvas class="led-canvas" id="mainCanvas" width="800" height="60"></canvas>
+        </div>
+        
+        <!-- Receiver ESP32 Strip -->
+        <div class="led-strip">
+          <div class="strip-header">
+            <span class="strip-title">Receiver ESP32 (200 LEDs) - Last 16 Special</span>
+            <span class="esp-now-indicator" id="receiverIndicator">RX</span>
+          </div>
+          <canvas class="led-canvas" id="receiverCanvas" width="800" height="60"></canvas>
+        </div>
+      </div>
+      
+      <div class="animation-info">
+        <div class="current-animation" id="currentAnimation">Animation 0: Random White Flash</div>
+        <div class="animation-details" id="animationDetails">Duration: 10000ms | Speed: 200ms | Synchronization delay: ~50ms</div>
+      </div>
+    </div>
+  </div>
+  
+  <!-- System Diagram (Bottom) -->
+  <div class="system-diagram">
+    <h3 class="diagram-title">System Architecture</h3>
+    <svg class="diagram-svg" viewBox="0 0 800 200">
+      <!-- Main ESP32 -->
+      <rect x="50" y="50" width="120" height="80" fill="#0ccebc" rx="10"/>
+      <text x="110" y="75" text-anchor="middle" fill="#000" font-size="12" font-weight="bold">Main ESP32</text>
+      <text x="110" y="90" text-anchor="middle" fill="#000" font-size="10">WiFi AP</text>
+      <text x="110" y="105" text-anchor="middle" fill="#000" font-size="10">Web Server</text>
+      <text x="110" y="120" text-anchor="middle" fill="#000" font-size="10">100 LEDs</text>
+      
+      <!-- WiFi Signal -->
+      <path d="M 110 40 Q 110 25 95 25 Q 110 25 125 25" stroke="#0ccebc" stroke-width="2" fill="none"/>
+      <circle cx="110" cy="30" r="2" fill="#0ccebc"/>
+      
+      <!-- ESP-NOW Arrow -->
+      <path d="M 170 90 L 280 90" stroke="#ff6b6b" stroke-width="3" marker-end="url(#arrowhead)"/>
+      <text x="225" y="85" text-anchor="middle" fill="#ff6b6b" font-size="10">ESP-NOW</text>
+      
+      <!-- Arrow marker -->
+      <defs>
+        <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+          <polygon points="0 0, 10 3.5, 0 7" fill="#ff6b6b"/>
+        </marker>
+      </defs>
+      
+      <!-- Receiver ESP32 -->
+      <rect x="300" y="50" width="120" height="80" fill="#ff6b6b" rx="10"/>
+      <text x="360" y="75" text-anchor="middle" fill="#fff" font-size="12" font-weight="bold">Receiver ESP32</text>
+      <text x="360" y="90" text-anchor="middle" fill="#fff" font-size="10">ESP-NOW RX</text>
+      <text x="360" y="105" text-anchor="middle" fill="#fff" font-size="10">200 LEDs</text>
+      <text x="360" y="120" text-anchor="middle" fill="#fff" font-size="10">Special 16</text>
+      
+      <!-- LED Strips -->
+      <rect x="450" y="60" width="300" height="20" fill="#333" rx="10"/>
+      <text x="600" y="75" text-anchor="middle" fill="#fff" font-size="10">300 Total ARGB LEDs</text>
+      
+      <!-- Power connections -->
+      <rect x="50" y="150" width="60" height="30" fill="#ffd700" rx="5"/>
+      <text x="80" y="170" text-anchor="middle" fill="#000" font-size="10">5V PSU</text>
+      
+      <path d="M 110 150 L 110 130" stroke="#ffd700" stroke-width="2"/>
+      <path d="M 360 150 L 360 130" stroke="#ffd700" stroke-width="2"/>
+      <path d="M 110 150 L 360 150" stroke="#ffd700" stroke-width="2"/>
+    </svg>
+  </div>
+
+  <script>
+    // System Configuration (matching Arduino constants)
+    const CONFIG = {
+      NUM_LEDS_MAIN: 100,
+      NUM_LEDS_RECEIVER: 200,
+      SPECIAL_START_INDEX: 184, // Last 16 LEDs on receiver
+      ANIMATION_DURATION_MS: 10000,
+      ANIMATION_TRANSITION_MS: 500,
+      MANUAL_COLOR_DURATION_MS: 10000,
+      
+      // Animation speeds
+      SPEED_RANDOM_WHITE_BLINK_MS: 200,
+      SPEED_FADE_STEPS: 50,
+      SPEED_COLOR_WIPE_DELAY_MS: 50,
+      SPEED_SPECIAL_16_DELAY_MS: 150,
+      SPEED_CHASE_GROUP_DELAY_MS: 150,
+      SPEED_FADE_INOUT_STEP_MS: 30,
+      SPEED_BLOCK_LIGHTUP_DELAY_MS: 800,
+      SPEED_PARTWISE_DELAY_MS: 600,
+      SPEED_BREATHING_STEP_MS: 40,
+      
+      // Color arrays
+      COLOR_LIST: ["#0ccebc", "#d9000d", "#16d900", "#d93300"],
+      COLOR_WIPE_COLORS: ["#FF00FF", "#00FFFF", "#FFFF00", "#FF007F"],
+      SPECIAL_16_COLORS: [
+        ["#FF00FF", "#00FF00"],
+        ["#00FFFF", "#FF00FF"],
+        ["#FFFF00", "#FF00FF"],
+        ["#FF0000", "#00FF00"]
+      ],
+      FADE_COLORS: ["#FF007F", "#7F00FF", "#00FF7F", "#FF7F00"],
+      RGB_CYCLE: ["#ff0000", "#ffffff", "#0000ff"],
+      SEQUENTIAL_COLORS: ["#FF0000", "#00FF00", "#0000FF", "#FF00FF"],
+      
+      SEGMENTS: [
+        [0, 49],     // Main board (LEDs 0-49)
+        [50, 99],    // Main board (LEDs 50-99)
+        [100, 149],  // Receiver board (LEDs 100-149)
+        [150, 199],  // Receiver board (LEDs 150-199)
+        [200, 283],  // Receiver board (LEDs 200-283)
+        [284, 299]   // Receiver board (Special last 16 LEDs)
+      ]
+    };
+    
+    // Animation names
+    const ANIMATION_NAMES = [
+      "Random White Flash",
+      "Full White + Fade Out", 
+      "Color Wipe Combined",
+      "Special Last 16 LEDs",
+      "Red-White-Blue Chase",
+      "Color Fade In/Out",
+      "Block Lighting",
+      "6-Part Sequential",
+      "Partwise Color Lighting"
+    ];
+    
+    // System state
+    let currentAnimation = 0;
+    let animationStartTime = 0;
+    let userColorActive = false;
+    let userColorStartTime = 0;
+    let savedUserColor = null;
+    let debugFlags = { packets: false, timing: false, sync: false };
+    
+    // Color indexes for cycling animations
+    let colorIndexes = {
+      colorWipe: 0,
+      special16: 0,
+      fade: 0,
+      sequential: 0,
+      general: 0
+    };
+    
+    // Canvas contexts
+    let mainCtx, receiverCtx;
+    let mainLeds = new Array(CONFIG.NUM_LEDS_MAIN).fill('#000000');
+    let receiverLeds = new Array(CONFIG.NUM_LEDS_RECEIVER).fill('#000000');
+    
+    // Initialize system
+    function init() {
+      const mainCanvas = document.getElementById('mainCanvas');
+      const receiverCanvas = document.getElementById('receiverCanvas');
+      
+      mainCtx = mainCanvas.getContext('2d');
+      receiverCtx = receiverCanvas.getContext('2d');
+      
+      // Start animation cycle
+      startAnimationCycle();
+      
+      // Initial render
+      renderLEDs();
+      
+      logSerial("[SYSTEM] Demo initialized");
+    }
+    
+    // Start the animation cycle
+    function startAnimationCycle() {
+      if (userColorActive && Date.now() - userColorStartTime < CONFIG.MANUAL_COLOR_DURATION_MS) {
+        // Still showing user color
+        setTimeout(startAnimationCycle, 100);
+        return;
+      }
+      
+      if (userColorActive) {
+        userColorActive = false;
+        clearAllLEDs();
+        logSerial("[MAIN] User color timeout, resuming animations");
+      }
+      
+      runCurrentAnimation();
+    }
+    
+    // Run the current animation
+    function runCurrentAnimation() {
+      const animName = ANIMATION_NAMES[currentAnimation];
+      updateAnimationInfo(animName);
+      logSerial(`[MAIN] Animation ${currentAnimation}: ${animName}`);
+      
+      animationStartTime = Date.now();
+      
+      switch(currentAnimation) {
+        case 0: randomWhiteFlash(); break;
+        case 1: fullWhiteFadeOut(); break;
+        case 2: colorWipeCombined(); break;
+        case 3: specialColorLast16(); break;
+        case 4: redWhiteBlueChase(); break;
+        case 5: colorFadeInOut(); break;
+        case 6: blockLighting(); break;
+        case 7: sixPartSequential(); break;
+        case 8: partwiseColorLighting(); break;
+      }
+    }
+    
+    // Animation implementations
+    function randomWhiteFlash() {
+      const duration = CONFIG.ANIMATION_DURATION_MS;
+      const interval = CONFIG.SPEED_RANDOM_WHITE_BLINK_MS;
+      
+      sendESPNOWCommand(1, 255, 255, 255);
+      
+      const animate = () => {
+        if (Date.now() - animationStartTime > duration || userColorActive) {
+          nextAnimation();
+          return;
+        }
+        
+        // Clear all LEDs
+        clearAllLEDs();
+        
+        // Random white flashes on both strips
+        for (let i = 0; i < CONFIG.NUM_LEDS_MAIN / 5; i++) {
+          const pos = Math.floor(Math.random() * CONFIG.NUM_LEDS_MAIN);
+          mainLeds[pos] = '#ffffff';
+        }
+        
+        for (let i = 0; i < CONFIG.NUM_LEDS_RECEIVER / 5; i++) {
+          const pos = Math.floor(Math.random() * CONFIG.NUM_LEDS_RECEIVER);
+          receiverLeds[pos] = '#ffffff';
+        }
+        
+        renderLEDs();
+        setTimeout(animate, interval);
+      };
+      
+      animate();
+    }
+    
+    function fullWhiteFadeOut() {
+      const duration = CONFIG.ANIMATION_DURATION_MS;
+      const fadeStart = 5000; // 5 seconds of full white
+      
+      sendESPNOWCommand(2, 255, 255, 255);
+      
+      // Initial full white
+      fillAllLEDs('#ffffff');
+      renderLEDs();
+      
+      setTimeout(() => {
+        // Start fade out
+        const fadeSteps = CONFIG.SPEED_FADE_STEPS;
+        let currentStep = 0;
+        
+        const fadeInterval = setInterval(() => {
+          if (userColorActive) {
+            clearInterval(fadeInterval);
+            nextAnimation();
+            return;
+          }
+          
+          const brightness = Math.max(0, 255 - (255 * currentStep / fadeSteps));
+          const color = `rgb(${brightness}, ${brightness}, ${brightness})`;
+          
+          fillAllLEDs(color);
+          renderLEDs();
+          
+          currentStep++;
+          if (currentStep > fadeSteps) {
+            clearInterval(fadeInterval);
+            nextAnimation();
+          }
+        }, 50);
+        
+      }, fadeStart);
+    }
+    
+    function colorWipeCombined() {
+      const color = CONFIG.COLOR_WIPE_COLORS[colorIndexes.colorWipe];
+      const delay = CONFIG.SPEED_COLOR_WIPE_DELAY_MS;
+      
+      sendESPNOWCommand(3, ...hexToRgb(color));
+      
+      clearAllLEDs();
+      renderLEDs();
+      
+      let currentLED = 0;
+      const totalLEDs = CONFIG.NUM_LEDS_MAIN + CONFIG.NUM_LEDS_RECEIVER;
+      
+      const wipeInterval = setInterval(() => {
+        if (userColorActive) {
+          clearInterval(wipeInterval);
+          nextAnimation();
+          return;
+        }
+        
+        if (currentLED < CONFIG.NUM_LEDS_MAIN) {
+          mainLeds[currentLED] = color;
+        } else {
+          receiverLeds[currentLED - CONFIG.NUM_LEDS_MAIN] = color;
+        }
+        
+        renderLEDs();
+        currentLED++;
+        
+        if (currentLED >= totalLEDs) {
+          clearInterval(wipeInterval);
+          setTimeout(() => {
+            colorIndexes.colorWipe = (colorIndexes.colorWipe + 1) % CONFIG.COLOR_WIPE_COLORS.length;
+            nextAnimation();
+          }, 1000);
+        }
+      }, delay);
+    }
+    
+    function specialColorLast16() {
+      const colors = CONFIG.SPECIAL_16_COLORS[colorIndexes.special16];
+      const mainColor = colors[0];
+      const specialColor = colors[1];
+      
+      sendESPNOWCommand(4, ...hexToRgb(mainColor), ...hexToRgb(specialColor));
+      
+      // Fill main color everywhere
+      fillAllLEDs(mainColor);
+      
+      // Special color for last 16 LEDs on receiver
+      for (let i = CONFIG.SPECIAL_START_INDEX; i < CONFIG.NUM_LEDS_RECEIVER; i++) {
+        receiverLeds[i] = specialColor;
+      }
+      
+      renderLEDs();
+      
+      setTimeout(() => {
+        colorIndexes.special16 = (colorIndexes.special16 + 1) % CONFIG.SPECIAL_16_COLORS.length;
+        nextAnimation();
+      }, CONFIG.ANIMATION_DURATION_MS);
+    }
+    
+    function redWhiteBlueChase() {
+      const colors = CONFIG.RGB_CYCLE;
+      const delay = CONFIG.SPEED_CHASE_GROUP_DELAY_MS;
+      const duration = CONFIG.ANIMATION_DURATION_MS;
+      
+      sendESPNOWCommand(5, ...hexToRgb(colors[0]), ...hexToRgb(colors[1]));
+      
+      let step = 0;
+      const chaseInterval = setInterval(() => {
+        if (Date.now() - animationStartTime > duration || userColorActive) {
+          clearInterval(chaseInterval);
+          nextAnimation();
+          return;
+        }
+        
+        // Main strip chase
+        for (let i = 0; i < CONFIG.NUM_LEDS_MAIN; i++) {
+          const colorIndex = (Math.floor(i / 10) + step) % 3;
+          mainLeds[i] = colors[colorIndex];
+        }
+        
+        // Receiver strip chase
+        for (let i = 0; i < CONFIG.NUM_LEDS_RECEIVER; i++) {
+          const colorIndex = (Math.floor(i / 10) + step) % 3;
+          receiverLeds[i] = colors[colorIndex];
+        }
+        
+        renderLEDs();
+        step++;
+      }, delay);
+    }
+    
+    function colorFadeInOut() {
+      const color = CONFIG.FADE_COLORS[colorIndexes.fade];
+      const rgb = hexToRgb(color);
+      const duration = CONFIG.ANIMATION_DURATION_MS;
+      const stepDelay = CONFIG.SPEED_FADE_INOUT_STEP_MS;
+      
+      sendESPNOWCommand(6, ...rgb);
+      
+      let brightness = 0;
+      let direction = 1;
+      
+      const fadeInterval = setInterval(() => {
+        if (Date.now() - animationStartTime > duration || userColorActive) {
+          clearInterval(fadeInterval);
+          colorIndexes.fade = (colorIndexes.fade + 1) % CONFIG.FADE_COLORS.length;
+          nextAnimation();
+          return;
+        }
+        
+        const currentRgb = rgb.map(c => Math.floor(c * brightness / 255));
+        const colorStr = `rgb(${currentRgb[0]}, ${currentRgb[1]}, ${currentRgb[2]})`;
+        
+        fillAllLEDs(colorStr);
+        renderLEDs();
+        
+        brightness += direction * 5;
+        if (brightness >= 255) {
+          brightness = 255;
+          direction = -1;
+          setTimeout(() => {}, 500); // Pause at full brightness
+        } else if (brightness <= 0) {
+          brightness = 0;
+          direction = 1;
+        }
+      }, stepDelay);
+    }
+    
+    function blockLighting() {
+      const color = CONFIG.COLOR_LIST[colorIndexes.general];
+      const delay = CONFIG.SPEED_BLOCK_LIGHTUP_DELAY_MS;
+      
+      sendESPNOWCommand(7, ...hexToRgb(color));
+      
+      clearAllLEDs();
+      renderLEDs();
+      
+      let segmentIndex = 0;
+      
+      const lightSegment = () => {
+        if (segmentIndex >= CONFIG.SEGMENTS.length || userColorActive) {
+          colorIndexes.general = (colorIndexes.general + 1) % CONFIG.COLOR_LIST.length;
+          nextAnimation();
+          return;
+        }
+        
+        const [start, end] = CONFIG.SEGMENTS[segmentIndex];
+        
+        // Light up segment
+        if (end < CONFIG.NUM_LEDS_MAIN) {
+          // Main board segment
+          for (let i = start; i <= end; i++) {
+            mainLeds[i] = color;
+          }
+        } else {
+          // Receiver board segment
+          const receiverStart = Math.max(0, start - CONFIG.NUM_LEDS_MAIN);
+          const receiverEnd = Math.min(CONFIG.NUM_LEDS_RECEIVER - 1, end - CONFIG.NUM_LEDS_MAIN);
+          for (let i = receiverStart; i <= receiverEnd; i++) {
+            receiverLeds[i] = color;
+          }
+        }
+        
+        renderLEDs();
+        segmentIndex++;
+        setTimeout(lightSegment, delay);
+      };
+      
+      lightSegment();
+    }
+    
+    function sixPartSequential() {
+      const color = CONFIG.SEQUENTIAL_COLORS[colorIndexes.sequential];
+      const delay = CONFIG.SPEED_PARTWISE_DELAY_MS;
+      
+      sendESPNOWCommand(8, ...hexToRgb(color));
+      
+      clearAllLEDs();
+      renderLEDs();
+      
+      const totalLEDs = CONFIG.NUM_LEDS_MAIN + CONFIG.NUM_LEDS_RECEIVER;
+      const segmentSize = Math.floor(totalLEDs / 6);
+      
+      let currentSegment = 0;
+      
+      const lightNextSegment = () => {
+        if (currentSegment >= 6 || userColorActive) {
+          // Light up all LEDs at the end
+          fillAllLEDs(color);
+          renderLEDs();
+          
+          setTimeout(() => {
+            colorIndexes.sequential = (colorIndexes.sequential + 1) % CONFIG.SEQUENTIAL_COLORS.length;
+            nextAnimation();
+          }, 2000);
+          return;
+        }
+        
+        clearAllLEDs();
+        
+        const startLED = currentSegment * segmentSize;
+        const endLED = Math.min((currentSegment + 1) * segmentSize, totalLEDs);
+        
+        for (let i = startLED; i < endLED; i++) {
+          if (i < CONFIG.NUM_LEDS_MAIN) {
+            mainLeds[i] = color;
+          } else {
+            receiverLeds[i - CONFIG.NUM_LEDS_MAIN] = color;
+          }
+        }
+        
+        renderLEDs();
+        currentSegment++;
+        setTimeout(lightNextSegment, delay);
+      };
+      
+      lightNextSegment();
+    }
+    
+    function partwiseColorLighting() {
+      const colorOrder = [
+        '#0000FF', // Blue
+        '#FFFF00', // Yellow
+        '#FF0000', // Red
+        '#FFFFFF', // White
+        '#FF9800'  // Vivid Gamboge
+      ];
+      
+      const delay = CONFIG.SPEED_PARTWISE_DELAY_MS;
+      
+      sendESPNOWCommand(9, ...hexToRgb(colorOrder[0]));
+      
+      clearAllLEDs();
+      renderLEDs();
+      
+      let segmentIndex = 0;
+      
+      const lightNextSegment = () => {
+        if (segmentIndex >= CONFIG.SEGMENTS.length || userColorActive) {
+          // Special effect for last 16 LEDs
+          for (let i = 0; i < 16; i++) {
+            const colorIndex = Math.floor(i * 5 / 16);
+            receiverLeds[CONFIG.SPECIAL_START_INDEX + i] = colorOrder[colorIndex];
+          }
+          renderLEDs();
+          
+          setTimeout(() => {
+            nextAnimation();
+          }, delay * 2);
+          return;
+        }
+        
+        const [start, end] = CONFIG.SEGMENTS[segmentIndex];
+        const segmentColor = colorOrder[segmentIndex % 5];
+        
+        // Light up segment gradually
+        if (end < CONFIG.NUM_LEDS_MAIN) {
+          // Main board segment
+          for (let i = start; i <= end; i++) {
+            mainLeds[i] = segmentColor;
+          }
+        } else {
+          // Receiver board segment
+          const receiverStart = Math.max(0, start - CONFIG.NUM_LEDS_MAIN);
+          const receiverEnd = Math.min(CONFIG.NUM_LEDS_RECEIVER - 1, end - CONFIG.NUM_LEDS_MAIN);
+          for (let i = receiverStart; i <= receiverEnd; i++) {
+            receiverLeds[i] = segmentColor;
+          }
+        }
+        
+        renderLEDs();
+        segmentIndex++;
+        setTimeout(lightNextSegment, delay);
+      };
+      
+      setTimeout(lightNextSegment, delay);
+    }
+    
+    // Utility functions
+    function nextAnimation() {
+      currentAnimation = (currentAnimation + 1) % ANIMATION_NAMES.length;
+      setTimeout(() => {
+        if (!userColorActive) {
+          startAnimationCycle();
+        }
+      }, CONFIG.ANIMATION_TRANSITION_MS);
+    }
+    
+    function clearAllLEDs() {
+      mainLeds.fill('#000000');
+      receiverLeds.fill('#000000');
+    }
+    
+    function fillAllLEDs(color) {
+      mainLeds.fill(color);
+      receiverLeds.fill(color);
+    }
+    
+    function hexToRgb(hex) {
+      const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+      return result ? [
+        parseInt(result[1], 16),
+        parseInt(result[2], 16),
+        parseInt(result[3], 16)
+      ] : [0, 0, 0];
+    }
+    
+    function rgbToHex(r, g, b) {
+      return "#" + [r, g, b].map(x => {
+        const hex = x.toString(16);
+        return hex.length === 1 ? "0" + hex : hex;
+      }).join("");
+    }
+    
+    function sendESPNOWCommand(command, r = 0, g = 0, b = 0, specialR = 0, specialG = 0, specialB = 0) {
+      const mainIndicator = document.getElementById('mainIndicator');
+      const receiverIndicator = document.getElementById('receiverIndicator');
+      
+      mainIndicator.classList.add('active');
+      
+      if (debugFlags.packets) {
+        logSerial(`[ESP-NOW] CMD:${command} RGB:(${r},${g},${b}) Special:(${specialR},${specialG},${specialB})`);
+      }
+      
+      setTimeout(() => {
+        receiverIndicator.classList.add('active');
+        mainIndicator.classList.remove('active');
+        
+        setTimeout(() => {
+          receiverIndicator.classList.remove('active');
+        }, 100);
+      }, 50); // Simulate transmission delay
+    }
+    
+    function renderLEDs() {
+      renderLEDStrip(mainCtx, mainLeds, CONFIG.NUM_LEDS_MAIN, 'main');
+      renderLEDStrip(receiverCtx, receiverLeds, CONFIG.NUM_LEDS_RECEIVER, 'receiver');
+    }
+    
+    function renderLEDStrip(ctx, leds, count, type) {
+      const canvas = ctx.canvas;
+      const width = canvas.width;
+      const height = canvas.height;
+      
+      ctx.clearRect(0, 0, width, height);
+      
+      const ledWidth = width / count;
+      const ledHeight = height - 20;
+      const yOffset = 10;
+      
+      for (let i = 0; i < count; i++) {
+        const x = i * ledWidth;
+        const color = leds[i];
+        
+        // LED body
+        ctx.fillStyle = color === '#000000' ? '#222' : color;
+        ctx.fillRect(x + 1, yOffset, ledWidth - 2, ledHeight);
+        
+        // LED border
+        ctx.strokeStyle = '#555';
+        ctx.lineWidth = 1;
+        ctx.strokeRect(x + 1, yOffset, ledWidth - 2, ledHeight);
+        
+        // Special highlighting for receiver's last 16 LEDs
+        if (type === 'receiver' && i >= CONFIG.SPECIAL_START_INDEX) {
+          ctx.strokeStyle = '#ff6b6b';
+          ctx.lineWidth = 2;
+          ctx.strokeRect(x + 1, yOffset, ledWidth - 2, ledHeight);
+        }
+        
+        // Debug timing markers
+        if (debugFlags.timing && i % 10 === 0) {
+          ctx.fillStyle = '#666';
+          ctx.fillRect(x, 0, 1, yOffset);
+          ctx.fillStyle = '#999';
+          ctx.font = '8px Arial';
+          ctx.fillText(i.toString(), x + 2, 8);
+        }
+      }
+      
+      // Sync point indicators
+      if (debugFlags.sync && type === 'receiver') {
+        ctx.fillStyle = '#0ccebc';
+        ctx.fillRect(0, height - 3, width, 3);
+      }
+    }
+    
+    function updateAnimationInfo(name) {
+      document.getElementById('currentAnimation').textContent = `Animation ${currentAnimation}: ${name}`;
+      document.getElementById('animationDetails').textContent = 
+        `Duration: ${CONFIG.ANIMATION_DURATION_MS}ms | Transition: ${CONFIG.ANIMATION_TRANSITION_MS}ms | ESP-NOW delay: ~50ms`;
+    }
+    
+    function logSerial(message) {
+      const monitor = document.getElementById('serialMonitor');
+      const timestamp = new Date().toLocaleTimeString();
+      monitor.innerHTML += `<span style="color: #666">[${timestamp}]</span> ${message}<br>`;
+      monitor.scrollTop = monitor.scrollHeight;
+      
+      // Keep only last 50 lines
+      const lines = monitor.innerHTML.split('<br>');
+      if (lines.length > 50) {
+        monitor.innerHTML = lines.slice(-50).join('<br>');
+      }
+    }
+    
+    // Web UI Functions (Original ESP32 interface)
+    function updateHexInput(color) {
+      document.getElementById('hexInput').value = color.toUpperCase();
+    }
+    
+    function selectAndSendColor(color) {
+      document.getElementById('hexInput').value = color;
+      document.getElementById('colorPicker').value = color;
+      sendColor(color);
+    }
+    
+    function updateAndSendColor(color) {
+      updateHexInput(color);
+      sendColor(color);
+    }
+    
+    function sendColor(color = null) {
+      const colorToSend = color || document.getElementById('hexInput').value;
+      
+      if(!/^#[0-9A-F]{6}$/i.test(colorToSend)) {
+        updateStatus('Invalid color format!', true);
+        return;
+      }
+      
+      updateStatus('Color applied: ' + colorToSend);
+      setUserColor(colorToSend);
+    }
+    
+    function setUserColor(hexColor) {
+      savedUserColor = hexColor;
+      userColorActive = true;
+      userColorStartTime = Date.now();
+      
+      // Immediately show the color
+      fillAllLEDs(hexColor);
+      renderLEDs();
+      
+      // Send ESP-NOW command
+      const rgb = hexToRgb(hexColor);
+      sendESPNOWCommand(0, ...rgb, ...rgb);
+      
+      logSerial(`[MAIN] User color set: ${hexColor}`);
+      logSerial(`[RECV] Color applied: ${hexColor}`);
+      
+      // Resume animations after timeout
+      setTimeout(() => {
+        if (userColorActive && Date.now() - userColorStartTime >= CONFIG.MANUAL_COLOR_DURATION_MS) {
+          userColorActive = false;
+          logSerial("[MAIN] User color timeout, resuming animations");
+          startAnimationCycle();
+        }
+      }, CONFIG.MANUAL_COLOR_DURATION_MS);
+    }
+    
+    function updateStatus(message, isError = false) {
+      const statusElement = document.getElementById('status');
+      statusElement.textContent = message;
+      statusElement.classList.add('active');
+      
+      if(isError) {
+        statusElement.style.color = '#ff4444';
+        statusElement.style.borderColor = '#ff4444';
+        statusElement.style.backgroundColor = '#ff444420';
+      } else {
+        statusElement.style.color = '#0ccebc';
+        statusElement.style.borderColor = '#0ccebc';
+        statusElement.style.backgroundColor = '#0ccebc20';
+      }
+      
+      setTimeout(() => {
+        statusElement.classList.remove('active');
+      }, 3000);
+    }
+    
+    function toggleDebug(flag) {
+      debugFlags[flag] = !debugFlags[flag];
+      const button = event.target;
+      
+      if (debugFlags[flag]) {
+        button.classList.add('active');
+        logSerial(`[DEBUG] ${flag.toUpperCase()} enabled`);
+      } else {
+        button.classList.remove('active');
+        logSerial(`[DEBUG] ${flag.toUpperCase()} disabled`);
+      }
+      
+      renderLEDs(); // Re-render with debug info
+    }
+    
+    // Initialize when page loads
+    window.addEventListener('load', init);
+  </script>
+</body>
+</html>
