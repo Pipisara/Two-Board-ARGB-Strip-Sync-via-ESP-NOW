@@ -273,11 +273,11 @@ const char index_html[] PROGMEM = R"rawliteral(
 </head>
 <body>
   <div class="container">
-    <h2>පින්බර පොසොන් මංගල්‍යක් වේවා..</h2>
-    <h1>පොසොන් පහන් කූඩුව 2025</h1>
+    <h2>Two ESP32 Board ARGB Strip Sync via ESP NOW Control Using Web</h2>
+    
   
     <div class="color-picker-container">
-      <span class="picker-label">ඔබ කැමති වර්ණය තෝරන්න</span>
+      <span class="picker-label">Select Your Color</span>
       <input type="color" id="colorPicker" onchange="updateAndSendColor(this.value)" value="#0ccebc">
     </div>
     
@@ -296,33 +296,26 @@ const char index_html[] PROGMEM = R"rawliteral(
     
     <div class="color-input-group">
       <input type="text" id="hexInput" placeholder="#RRGGBB" maxlength="7" value="#0ccebc">
-      <button onclick="sendColor()">හරි</button>
+      <button onclick="sendColor()">Done</button>
     </div>
     
     <div class="status" id="status">
-      සූදානමින්...
+      Ready...
     </div>
     
-    <div class="instructions">
-      <h3>භාවිතා කරන්නේ කෙසේද:</h3>
-      <p>• වර්ණය වහාම යෙදීමට ඕනෑම වර්ණ කොටුවක් ක්ලික් කරන්න</p>
-      <p>• ඔබ කැමති වර්ණ තෝරා ගැනීමට ඉහල වර්ණ තෝරකය භාවිතා කරන්න.</p>
-      <p>• නැතහොත් අතින් HEX වර්ණ කේතයක් ඇතුළත් කරන්න.</p>
-      <p>(උදා: #FF0000 - රතු )</p>
-      <p>• "හරි " බොත්තම මගින් ඔබේ තේරීම තහවුරු කරන්න.</p>
-    </div>
+    
     
     <div class="instructions">
       <h3>How to Use:</h3>
       <p>• Click any color box to immediately apply that color</p>
       <p>• Use the color picker to select custom colors</p>
       <p>• Or manually enter a HEX color code (e.g. #FF00FF)</p>
-      <p>• The "හරි" button confirms your manual selection</p>
+      <p>• The "Done" button confirms your manual selection</p>
     </div>
   </div>
   
   <div class="footer">
-    වල්පොල පොසොන් කලාපය
+    Pipisara Chandrabhanu-2025
   </div>
   
   <script>
